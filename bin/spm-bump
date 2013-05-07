@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var path = require('path');
+var spawn = require('child_process').spawn;
+
+var pkg, version = process.argv[2];
+
+try {
+  pkg = require(path.join(process.cwd(), 'package.json'));
+} catch(e) {
+  log('package.json is not exist or bad format');
+  process.exit(1);
+}
+
+if (!version) {
+  log('You should specify version such as spm-bump 1.0.0');
+  process.exit(1);
+}
+
+if (gt(version, pkg.version)) {
+  pkg.version = version;
+  fs.writeFile(path.join(process.cwd(), 'package.json'), JSON.stringify(pkg, null, '  '), function(err) {
+    spawn('git', ['add', 'package.json'], {stdio: 'inherit'});
+    spawn('git', ['commit', '-m', 'bump ' + version], {stdio: 'inherit'});
+    spawn('git', ['push', 'origin', 'master'], {stdio: 'inherit'});
+    spawn('git', ['tag', version], {stdio: 'inherit'});
+    spawn('git', ['push', 'origin', version], {stdio: 'inherit'});
+    spawn('npm', ['publish'], {stdio: 'inherit'})
+      .on('close', function() {
+        log('\x1b[32mBump ' + version + '\x1b[0m');
+      });
+  });
+} else {
+  log('Version should greater than ' + pkg.version);
+}
+
+function gt(ver1, ver2) {
+  if (!(isValid(ver1) && isValid(ver2))) {
+    log('version not valid');
+    process.exit(1);
+  }
+
+  var s1 = ver1.split('.');
+  var s2 = ver2.split('.');
+
+  for (var i = 0; i < 3; i++) {
+    if ((parseInt(s1[i], 10) > parseInt(s2[i], 10)) ||
+      (parseInt(s1[i], 10) === parseInt(s2[i], 10) && s1[i].length < s2[i].length)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isValid(ver) {
+  var s = ver.split('.');
+  if (s.length !== 3) return false;
+  if (/^\d+$/g.test(s[0]) && /^\d+$/g.test(s[1])) return true;
+  return false;
+}
+
+function log(str) {
+  console.log('');
+  console.log('  ' + str);
+  console.log('');
+}

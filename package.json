@@ -1,0 +1,29 @@
+{
+  "name": "spm-bump",
+  "description": "bump version",
+  "version": "0.0.0",
+  "homepage": "https://github.com/popomore/spm-bump",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/popomore/spm-bump.git"
+  },
+  "bugs": {
+    "url": "https://github.com/popomore/spm-bump/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/popomore/spm-bump/blob/master/LICENSE-MIT"
+    }
+  ],
+  "bin": {
+    "spm-bump": "bin/spm-bump"
+  },
+  "keywords": [
+    "spmplugin"
+  ],
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js",
+    "uninstall": "node scripts/uninstall.js"
+  }
+}
