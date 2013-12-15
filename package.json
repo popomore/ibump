@@ -1,11 +1,11 @@
 {
-  "name": "spm-bump",
-  "description": "bump version",
+  "name": "ibump",
+  "description": "bump version, create tag and publish to npm",
   "version": "0.1.0",
-  "homepage": "https://github.com/popomore/spm-bump",
+  "homepage": "https://github.com/popomore/ibump",
   "repository": {
     "type": "git",
-    "url": "git://github.com/popomore/spm-bump.git"
+    "url": "git://github.com/popomore/ibump.git"
   },
   "dependencies": {
     "semver": "~2.2.1",
@@ -13,22 +13,15 @@
     "commander": "2.1.0"
   },
   "bugs": {
-    "url": "https://github.com/popomore/spm-bump/issues"
+    "url": "https://github.com/popomore/ibump/issues"
   },
   "licenses": [
     {
       "type": "MIT",
-      "url": "https://github.com/popomore/spm-bump/blob/master/LICENSE-MIT"
+      "url": "https://github.com/popomore/ibump/blob/master/LICENSE-MIT"
     }
   ],
   "bin": {
-    "spm-bump": "bin/spm-bump"
-  },
-  "keywords": [
-    "spmplugin"
-  ],
-  "scripts": {
-    "postinstall": "node scripts/postinstall.js",
-    "uninstall": "node scripts/uninstall.js"
+    "ibump": "bin/ibump"
   }
 }
