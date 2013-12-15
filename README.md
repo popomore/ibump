@@ -1,6 +1,6 @@
 # spm-bump
 
-> change version, create tag, publish to npm
+> bump version, create tag and publish to npm
 
 -----
 
@@ -8,8 +8,24 @@
 
 Install spm-bump with npm:
 
-    $ npm install spm-bump -g
+```
+$ npm install ibump -g
+```
 
 ## Usage
 
-    $ spm-bump 1.0.0
+```
+Usage: ibump [options]
+
+Options:
+  -h, --help     output usage information
+  -V, --version  output the version number
+  -v, --verbose  
+  -M, --major    major +1
+  -m, --minor    minor +1
+  -p, --patch    patch +1
+```
+
+## Lisence
+
+MIT
