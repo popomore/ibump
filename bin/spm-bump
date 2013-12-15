@@ -2,66 +2,163 @@
 
 var fs = require('fs');
 var path = require('path');
+var commander = require('commander');
 var spawn = require('child_process').spawn;
+var Stream = require('stream').Stream;
+var proc = require('procstreams');
+var color = require('colorful');
+var Bump = require('..');
 
-var pkg, version = process.argv[2];
+var pkg = require(process.cwd() + '/package.json');
 
-try {
-  pkg = require(path.join(process.cwd(), 'package.json'));
-} catch(e) {
-  log('package.json is not exist or bad format');
-  process.exit(1);
-}
+commander
+  .version(require('../package.json').version)
+  .option('-v, --verbose', '')
+  .option('-M, --major', 'major +1')
+  .option('-m, --minor', 'minor +1')
+  .option('-p, --patch', 'patch +1')
+  .parse(process.argv);
 
-if (!version) {
-  log('You should specify version such as spm-bump 1.0.0');
-  process.exit(1);
-}
-
-if (gt(version, pkg.version)) {
-  pkg.version = version;
-  fs.writeFile(path.join(process.cwd(), 'package.json'), JSON.stringify(pkg, null, '  '), function(err) {
-    spawn('git', ['add', 'package.json'], {stdio: 'inherit'});
-    spawn('git', ['commit', '-m', 'bump ' + version], {stdio: 'inherit'});
-    spawn('git', ['push', 'origin', 'master'], {stdio: 'inherit'});
-    spawn('git', ['tag', version], {stdio: 'inherit'});
-    spawn('git', ['push', 'origin', version], {stdio: 'inherit'});
-    spawn('npm', ['publish'], {stdio: 'inherit'})
-      .on('close', function() {
-        log('\x1b[32mBump ' + version + '\x1b[0m');
+var version = bumpVersion(pkg.version);
+updatePackage(version, function() {
+  push(function() {
+    createTag(version, function() {
+      publish(function() {
+        console.log('>> done');
       });
+    });
   });
-} else {
-  log('Version should greater than ' + pkg.version);
-}
+});
 
-function gt(ver1, ver2) {
-  if (!(isValid(ver1) && isValid(ver2))) {
-    log('version not valid');
-    process.exit(1);
+function bumpVersion(version) {
+  var bump;
+  try {
+    bump = new Bump(version)
+      .on('error', exit);
+  } catch(err) {
+    exit(err);
   }
 
-  var s1 = ver1.split('.');
-  var s2 = ver2.split('.');
-
-  for (var i = 0; i < 3; i++) {
-    if ((parseInt(s1[i], 10) > parseInt(s2[i], 10)) ||
-      (parseInt(s1[i], 10) === parseInt(s2[i], 10) && s1[i].length < s2[i].length)) {
-      return true;
+  if (commander.args[0]) {
+    bump.version(commander.args[0]);
+  } else {
+    var v = ['major', 'minor', 'patch'];
+    for (var i in v) {
+      if (commander[v[i]]) {
+        bump[v[i]]();
+      }
     }
   }
-  return false;
+  return bump.toString();
+
+  function exit(err) {
+    console.error('>> ' + color.red(err));
+    process.exit(1);
+  }
 }
 
-function isValid(ver) {
-  var s = ver.split('.');
-  if (s.length !== 3) return false;
-  if (/^\d+$/g.test(s[0]) && /^\d+$/g.test(s[1])) return true;
-  return false;
+function updatePackage(version, cb) {
+  if (version !== pkg.version) {
+    pkg.version = version;
+    var fp = path.join(process.cwd(), 'package.json');
+    fs.writeFile(fp, JSON.stringify(pkg, null, '  '), function(err) {
+      onData('edited package.json ' + version, 'failed to edit package.json')(err);
+      proc('git add package.json')
+        .data(onData('added package.json', 'failed to git add'))
+        .and('git commit -m "bump ' + version + '"')
+        .data(onData('commited', 'failed to git commit'))
+        .on('close', fixCb(cb));
+    });
+  } else {
+    cb();
+  }
 }
 
-function log(str) {
-  console.log('');
-  console.log('  ' + str);
-  console.log('');
+function push(cb) {
+  proc('git rev-parse --abbrev-ref HEAD')
+    .pipe(createPushStream())
+    .on('close', fixCb(cb));
+
+  // git push origin master
+  function createPushStream() {
+    var stream = new Stream();
+    stream.writable = true;
+    stream.readable = true;
+
+    var data = '';
+    stream.write = function (buf) {
+      data += buf;
+    };
+    stream.end = function () {
+      var err, errData = '', outData = '', branch = data.toString().replace('\n', '');
+      var cp = spawn('git', ['push', 'origin', branch]);
+      var callback = onData('pushed branch ' + branch, 'failed to push branch ' + branch);
+
+      cp.stderr.on('data', function (data) {
+        errData += data;
+      });
+
+      cp.stdout.on('data', function (data) {
+        outData += data;
+      });
+
+      cp.on('error', function(e) {
+        err = e;
+      });
+
+      cp.on('close', function (code) {
+        callback(code > 0 ? err || errData : '', outData.toString(), errData.toString());
+        this.emit('end');
+      }.bind(this));
+
+    };
+    return stream;
+  }
+}
+
+function createTag(version, cb) {
+  proc('git tag')
+    .pipe('grep ' + version)
+    .data(onData('existed tag ' + version, 'not exist tag ' + version))
+    .or('git tag ' + version)
+    .data(onData('created tag ' + version, 'failed to create tag ' + version))
+    .and('git push origin ' + version)
+    .data(onData('pushed tag ' + version, 'failed to pushed tag ' + version))
+    .on('close', fixCb(cb));
+}
+
+function publish(cb) {
+  console.log('>> now publish to npm');
+  proc('npm publish')
+    .data(onData('published ' + version, 'failed to publish ' + version))
+    .on('close', fixCb(cb));
+}
+
+function onData(success, error) {
+  return function(err, stdout, stderr) {
+    if (err) {
+      console.error('>> ' + color.red(error));
+      if (commander.verbose && stderr) {
+        console.error(stderr
+          .toString()
+          .split('\n')
+          .filter(function(str) {
+            return !!str;
+          })
+          .map(function(str) {
+            return '   ' + color.grey('| ' + str);
+          })
+          .join('\n')
+        );
+      }
+    } else {
+      success && console.log('>> ' + (typeof success === 'function' ? success() : success));
+    }
+  };
+}
+
+function fixCb(cb) {
+  return function() {
+    process.nextTick(cb);
+  };
 }
