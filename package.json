@@ -10,7 +10,8 @@
   "dependencies": {
     "semver": "~2.2.1",
     "procstreams": "~0.3.0",
-    "commander": "2.1.0"
+    "commander": "2.1.0",
+    "colorful": "~2.1.0"
   },
   "bugs": {
     "url": "https://github.com/popomore/ibump/issues"
