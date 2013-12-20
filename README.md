@@ -4,6 +4,8 @@
 
 -----
 
+Alternatively, You can use [npm version](https://npmjs.org/doc/cli/npm-version.html).
+
 ## Install
 
 Install spm-bump with npm:
