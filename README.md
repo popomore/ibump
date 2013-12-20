@@ -1,4 +1,4 @@
-# spm-bump
+# iBump
 
 > bump version, create tag and publish to npm
 
@@ -8,7 +8,7 @@ Alternatively, You can use [npm version](https://npmjs.org/doc/cli/npm-version.h
 
 ## Install
 
-Install spm-bump with npm:
+Install with npm:
 
 ```
 $ npm install ibump -g
