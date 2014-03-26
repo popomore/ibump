@@ -16,11 +16,14 @@ util.inherits(Bump, EventEmitter);
 
 Bump.prototype.major = function() {
   this.version.major++;
+  this.version.minor = 0;
+  this.version.patch = 0;
   return this;
 };
 
 Bump.prototype.minor = function() {
   this.version.minor++;
+  this.version.patch = 0;
   return this;
 };
 
