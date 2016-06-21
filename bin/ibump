@@ -33,6 +33,7 @@ updatePackage(version, function() {
 });
 
 function bumpVersion(version) {
+  update(fs.readFileSync(pkg), commander);
   var bump;
   try {
     bump = new Bump(version)
